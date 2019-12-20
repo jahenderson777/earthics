@@ -34,11 +34,13 @@
                   (cond (= mode-group :terrain)
                         {:db (-> db
                                  (assoc-in [:world x y :terrain] mode)
+                                 (assoc-in [:world x y :surface] :none)
                                  (assoc-in [:world x y :surface-q] 0)
                                  db/calc)}
 
                         (= mode-group :surface)
                         {:db (-> db
+                                 (assoc-in [:world x y :terrain] :land)
                                  (assoc-in [:world x y :surface] mode)
                                  (assoc-in [:world x y :surface-q] 0)
                                  (update :unnecesary-death (fn [x] (if (= current-surface :civilisation)
@@ -49,3 +51,9 @@
 (reg-event-db :step
               (fn [db _]
                 (db/step db)))
+
+(reg-event-fx :mouse-over
+              (fn [{db :db} [_ x y]]
+                (let [{:keys [mouse-down]} db]
+                  (when mouse-down
+                    {:dispatch [:tile-click x y]}))))

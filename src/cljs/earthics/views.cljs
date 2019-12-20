@@ -21,14 +21,15 @@
                    :margin-bottom 1
                    :text-align "center"
                    :background (get-in db/modes [:terrain :modes terrain :color])}
-           :on-click #(dispatch [:tile-click x y])}
-     
-     ;(str x " " y )
-     [:div {:style {;:display "inline-block"
-                    :width 34
+           :on-mouse-down #(do (dispatch [:assoc :mouse-down true])
+                               (dispatch [:mouse-over x y]))
+           :on-mouse-over #(dispatch [:mouse-over x y])}
+     [:div {:style {:width 34
                     :height 24
                     :margin 3
-                    :vertical-align "center"
+                    :padding-top 0
+                    :line-height 2
+                    :color "black"
                     :background (get-in db/modes [:surface :modes surface :color])}}
       (if (and surface-q (not (zero? surface-q)))
         (int surface-q)
@@ -46,7 +47,8 @@
        [:div "reflection: " (<- :get :reflection)]
        [:div "CO2: " (gstring/format "%.2f" (<- :get :co2))]
        [:div "methane: " (gstring/format "%.2f" (<- :get :methane))]
-       [:div "particulates: " (<- :get :particulates)]]
+       ;[:div "particulates: " (<- :get :particulates)]
+       ]
 
       [:div {:style {:display "inline-block" :margin-left 10}}
        [:div "temp: " (gstring/format "%.2f" (<- :get :temp))]
@@ -68,16 +70,18 @@
                        :let [mode (keyword mode-group mode)]]
                    ^{:key mode}
                    [:div {:on-click #(dispatch [:assoc :mode mode])
-                          :style {:padding 3
+                          :style {:padding 4
+                                  :margin 3
                                   :display "inline-block"
-                                  :background (when (= mode current-mode)
-                                                "#339")}}
+                                  :background (if (= mode current-mode)
+                                                "#339"
+                                                "#555")}}
                     label])]))]]]))
 
 (defn main-panel []
   [:<>
    [header]
-   [:div {:style {:margin-top 100
+   [:div.noselect {:style {:margin-top 100
                   :text-align "center"}}
     (doall
       (for [y (range world-size-y)]

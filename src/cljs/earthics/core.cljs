@@ -23,5 +23,6 @@
                     (re-frame/dispatch [:step])
                     true)
                   500)
+  (js/window.addEventListener "mouseup" #(re-frame/dispatch [:assoc :mouse-down false]))
   (dev-setup)
   (mount-root))
