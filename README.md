@@ -24,3 +24,5 @@ Wait a bit, then browse to [http://localhost:8280](http://localhost:8280).
 
 created with 
 lein new re-frame earthics +cider
+
+lein prod

@@ -116,7 +116,9 @@
                                          (> temp 8)
                                          (< population food))
                                     (and (= surface :trees)
-                                         (> co2 20))
+                                         (> co2 20)
+                                         (< temp 30)
+                                         (> temp 2))
                                     (and (= surface :agriculture)
                                          (< temp 18)
                                          (> temp 10)
@@ -138,14 +140,15 @@
     (cond-> (assoc-in db tile-path new-tile)
       true (update :reflection + (get-in modes [:surface :modes surface :reflect]))
 
-      (= terrain :water) (update :new-rainfall + 0.01)
+      (= terrain :water) (update :new-rainfall + 0.003)
 
       (and @dead
            (= 0 (rand-int 10))) (assoc-in (concat tile-path [:surface]) :none)
 
       (and (not= surface :ice)
            (< temp 11)
-           (= 0 (rand-int 100)))
+           (or (and (= 0 (rand-int 800)) (= terrain :land))
+               (and (= 0 (rand-int 140)) (= terrain :water))))
       (-> (assoc-in (concat tile-path [:surface]) :ice)
           (assoc-in (concat tile-path [:surface-q]) 3))
 
@@ -195,13 +198,11 @@
         next-db
         (-> (reduce step-tile db tile-paths)
             (update :time + 1)
-            (update :co2 (fn [co2] (clamp co2 0 500)))
+            (update :co2 (fn [co2] (clamp (* 0.9993 co2) 0 500)))
             (update :methane * 0.97)
             (update :new-rainfall (fn [r] (clamp (* r (:temp db))
                                             0 100)))
-            step-temp
-            ;ice
-            )
+            step-temp)
         pre-population (:population db)
         next-population (:new-population next-db)
         time (:time next-db)
