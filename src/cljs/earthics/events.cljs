@@ -11,10 +11,10 @@
                               (vec (for [y (range world-size-y)]
                                      {:surface-q 0
                                       :underworld :foo
-                                      :terrain (if (or (>= y (- world-size-y 1))
+                                      :terrain :water
+                                      :surface (if (or (>= y (- world-size-y 1))
                                                        (= y 0))
-                                                 :ice :water)
-                                      :surface :none
+                                                 :ice :none)
                                       :troposphere :foo
                                       :stratosphere :foo})))))))
 
@@ -35,8 +35,7 @@
                         {:db (-> db
                                  (assoc-in [:world x y :terrain] mode)
                                  (assoc-in [:world x y :surface] :none)
-                                 (assoc-in [:world x y :surface-q] 0)
-                                 db/calc)}
+                                 (assoc-in [:world x y :surface-q] 0))}
 
                         (= mode-group :surface)
                         {:db (-> db
@@ -45,8 +44,7 @@
                                  (assoc-in [:world x y :surface-q] 0)
                                  (update :unnecesary-death (fn [x] (if (= current-surface :civilisation)
                                                                     (+ x q)
-                                                                    x)))
-                                 db/calc)}))))
+                                                                    x))))}))))
 
 (reg-event-db :step
               (fn [db _]

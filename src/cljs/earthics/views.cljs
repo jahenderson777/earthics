@@ -7,6 +7,7 @@
    [earthics.config :as config :refer [world-size-x world-size-y]]
    [goog.string :as gstring]
    [goog.string.format]
+   [reagent.core :as reagent]
    ))
 
 (defn <- [& v]
@@ -21,6 +22,7 @@
                    :margin-bottom 1
                    :text-align "center"
                    :background (get-in db/modes [:terrain :modes terrain :color])}
+           :on-click #(dispatch [:tile-click x y])
            :on-mouse-down #(do (dispatch [:assoc :mouse-down true])
                                (dispatch [:mouse-over x y]))
            :on-mouse-over #(dispatch [:mouse-over x y])}
@@ -44,9 +46,10 @@
      [:h1 "Riverford Earth Sim"]
      [:div
       [:div {:style {:display "inline-block"}}
-       [:div "reflection: " (<- :get :reflection)]
+       [:div "reflection: " (gstring/format "%.2f" (<- :get :reflection))]
        [:div "CO2: " (gstring/format "%.2f" (<- :get :co2))]
        [:div "methane: " (gstring/format "%.2f" (<- :get :methane))]
+       [:div "rainfall: " (gstring/format "%.2f" (<- :get :rainfall))]
        ;[:div "particulates: " (<- :get :particulates)]
        ]
 
@@ -78,6 +81,37 @@
                                                 "#555")}}
                     label])]))]]]))
 
+(defn draw-canvas-contents [canvas props]
+  (let [{:keys [data color scale]} props
+        ctx (.getContext canvas "2d")
+        w (.-clientWidth canvas)
+        h (.-clientHeight canvas)
+        vx (volatile! 0)]
+    (.clearRect ctx 0 0 (.-width canvas) (.-height canvas))
+    (set! (.-strokeStyle ctx) color)
+    (.beginPath ctx)
+    (.moveTo ctx 0 (- 200 (* scale (first data))))
+    (doseq [y data]
+      (.lineTo ctx @vx (- 200 (* scale y)))
+      (vswap! vx + 6))
+    (aset ctx "lineWidth" 1)
+    (.stroke ctx)))
+
+(defn html-canvas [data]
+  (let [dom-node (reagent/atom nil)]
+    (reagent/create-class
+     {:component-did-mount
+      (fn [this]
+        (reset! dom-node (reagent/dom-node this)))
+
+      :component-did-update
+      (fn [this]
+        (draw-canvas-contents (.-firstChild @dom-node) (second (reagent/argv this))))
+
+      :reagent-render
+      (fn []
+        [:div [:canvas {:width 1000 :height 200}]])})))
+
 (defn main-panel []
   [:<>
    [header]
@@ -89,4 +123,17 @@
         [:div {:style {:white-space "nowrap"}}
          (for [x (range world-size-x)]
            ^{:key [x y]}
-           [tile x y])]))]])
+           [tile x y])]))]
+   [html-canvas {:color (hsl 100 80 50)
+                 :scale 0.3
+                 :data (<- :get :history :co2)}]
+   [html-canvas {:color (hsl 180 80 50)
+                 :scale 3
+                 :data (<- :get :history :temp)}]
+   [html-canvas {:color (hsl 250 80 50)
+                 :scale 0.1
+                 :data (<- :get :history :population)}]
+   [html-canvas {:color (hsl 50 80 50)
+                 :scale 0.1
+                 :data (<- :get :history :unnecessary-death)}]])
+
