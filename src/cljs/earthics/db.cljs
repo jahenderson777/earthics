@@ -30,7 +30,8 @@
 (def modes
   {:surface {:label "surface"
              :modes {:trees {:label "trees" :color (hsl 100 70 20) :reflect 0.1}
-                     :civilisation {:label "civilisation" :color (hsl 0 0 50) :reflect 0.1}
+                     :civilisation {:label "civilisation" :color (hsl 0 0 40) :reflect 0.1}
+                     :civilisation-2 {:label "civilisation 2" :color (hsl 232 10 60) :reflect -0.2 :level 2}
                      :desert {:label "desert" :color (hsl 30 80 60) :reflect 0.2}
                      :pasture {:label "pasture" :color (hsl 130 60 40) :reflect 0.1}
                      :agriculture {:label "agriculture" :color (hsl 70 60 40) :reflect 0.1}
@@ -53,37 +54,22 @@
                        (* reflection -0.0001)
                        (* methane 0.0005)))))
 
-(defn spread-trees [db [_ x y]]
+(defn spread-tile [db [_ x y] to-spread & avoiding]
   (let [x (+ x (rand-int 3) -1)
         y (+ y (rand-int 3) -1)
         {:keys [surface terrain] :as new-tile} (get-in db [:world x y])]
-    (if (and (not= surface :trees)
-             (not= surface :civilisation)
+    (if (and (not (contains? (conj (set avoiding)
+                                   to-spread)
+                             surface))
              (= terrain :land)
              (< y world-size-y)
              (< x world-size-x)
              (> y 0)
              (>= x 0))
       (-> db
-          (assoc-in [:world x y :surface] :trees)
+          (assoc-in [:world x y :surface] to-spread)
           (assoc-in [:world x y :surface-q] 0))
       db)))
-
-(defn spread-civilisation [db [_ x y]]
-  (let [x (+ x (rand-int 3) -1)
-        y (+ y (rand-int 3) -1)
-        {:keys [surface terrain] :as new-tile} (get-in db [:world x y])]
-    (if (and (not= surface :civilisation)
-             (= terrain :land)
-             (< y world-size-y)
-             (< x world-size-x)
-             (> y 0)
-             (>= x 0))
-      (-> db
-          (assoc-in [:world x y :surface] :civilisation)
-          (assoc-in [:world x y :surface-q] 0))
-      db)))
-
 
 (def latitude-temp-bias
   (vec (for [y (range world-size-y)]
@@ -114,6 +100,10 @@
                                     (and (= surface :civilisation)
                                          (< temp 22)
                                          (> temp 8)
+                                         (< population food))
+                                    (and (= surface :civilisation-2)
+                                         (< temp 20)
+                                         (> temp 10)
                                          (< population food))
                                     (and (= surface :trees)
                                          (> co2 20)
@@ -152,12 +142,14 @@
       (-> (assoc-in (concat tile-path [:surface]) :ice)
           (assoc-in (concat tile-path [:surface-q]) 3))
 
-      (and (= surface :civilisation) @maxed-out) (spread-civilisation tile-path)
+      (and (= surface :civilisation) @maxed-out) (spread-tile tile-path :civilisation)
 
       (= surface :civilisation) (-> (update :new-population + q)
                                     (update :co2 + (* q 0.01)))
+      (= surface :civilisation) (-> (update :new-population + (* 2 q))
+                                    (update :co2 + (* q 0.04)))
 
-      (and (= surface :trees) @maxed-out) (spread-trees tile-path)
+      (and (= surface :trees) @maxed-out) (spread-tile tile-path :trees :civilisation :civilisation-2)
 
       (= surface :trees) (update :co2 + (* q -0.01))
 
@@ -210,6 +202,10 @@
     (cond-> next-db
       (< next-population pre-population)
       (update :unnecessary-death + (- pre-population next-population))
+
+      (> next-population 2000) (update :level-2-counter inc)
+
+      (> (:level-2-counter next-db) 50) (assoc :level-2 true)
 
       decade?
       (update-histories))))

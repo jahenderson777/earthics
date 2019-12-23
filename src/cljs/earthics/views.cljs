@@ -69,8 +69,10 @@
                 ^{:key mode-group}
                 [:div {:style {:display "block" :text-align "center"}}
                  [:div label]
-                 (for [[mode {:keys [label]}] modes
-                       :let [mode (keyword mode-group mode)]]
+                 (for [[mode {:keys [label level]}] modes
+                       :let [mode (keyword mode-group mode)]
+                       :when (or (nil? level)
+                                 (and (= 2 level) (<- :get :level-2)))]
                    ^{:key mode}
                    [:div {:on-click #(dispatch [:assoc :mode mode])
                           :style {:padding 4
