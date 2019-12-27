@@ -43,7 +43,7 @@
                    :height 100
                    :position "fixed"
                    :background (hsl 0 0.4 0.4 0.4)}}
-     [:h1 "Riverford Earth Sim"]
+     [:h1 "Riverford Earth Sim v2"]
      [:div
       [:div {:style {:display "inline-block"}}
        [:div "reflection: " (gstring/format "%.2f" (<- :get :reflection))]
@@ -58,7 +58,7 @@
        [:div "food: " (gstring/format "%.2f" (<- :get :food))]
        [:div "population: " (int (<- :get :population))]
        [:div "unnecessary death: " (int (<- :get :unnecessary-death))]
-       ;[:div "fulfilment: " (<- :get :fulfilment)]
+       [:div "credits: " (gstring/format "%.2f" (<- :get :money))]
        ]
 
 

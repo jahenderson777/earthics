@@ -7,7 +7,7 @@
 (def default-db
   {:mode :surface/agriculture
    :reflection 0
-   :co2 100
+   :co2 200
    :methane 10
    :particulates 1
    :rainfall 0
@@ -23,7 +23,7 @@
    :time 1500.0
    :food 0
    :temp 15
-   :money 10
+   :money 100
    :population 2
    :unnecessary-death 0
    :fulfilment 2})
@@ -51,11 +51,13 @@
 (defn step-temp [db]
   (let [{:keys [co2 methane reflection temp particulates]} db]
     (assoc db :temp (+ temp
-                       (* -0.002 temp)  ; heat radiation
-                       (* co2 0.0002)
-                       (* reflection -0.0001)
-                       (* particulates -0.01)
-                       (* methane 0.0005)))))
+                       (* 0.7
+                          (+ (* -0.002 temp) ; heat radiation
+                             (* -0.011 (clamp (- temp 16) 0 100))
+                             (* co2 0.0002)
+                             (* reflection -0.0001)
+                             (* particulates -0.01)
+                             (* methane 0.0005)))))))
 
 (defn spread-tile [db [_ x y] to-spread & avoiding]
   (let [x (+ x (rand-int 3) -1)
@@ -134,7 +136,7 @@
       true (update :reflection + (get-in modes [:surface :modes surface :reflect]))
 
       (= terrain :water) (update :new-rainfall + 0.003)
-      (and (= terrain :water) (= surface :none)) (update :co2 + -0.003)
+      (and (= terrain :water) (= surface :none)) (update :co2 + -0.001)
 
       (and @dead
            (= 0 (rand-int 30))) (assoc-in (concat tile-path [:surface]) :none)
@@ -206,7 +208,7 @@
             (update :co2 (fn [co2] (clamp (* 1 ;0.9993
                                             co2) 0 800)))
             (update :methane * 0.97)
-            (update :particulates (fn [p] (clamp (- p 0.14) 0 500)))
+            (update :particulates (fn [p] (clamp (* 0.8 (- p 0.16)) 0 500)))
             (update :new-rainfall (fn [r] (clamp (* r (:temp db))
                                             0 100)))
             step-temp)
@@ -217,6 +219,12 @@
     (cond-> next-db
       (< next-population pre-population)
       (update :unnecessary-death + (- pre-population next-population))
+
+      true
+      (update :money #(clamp (+ % 0.1 (- next-population pre-population)) 0 1000000))
+
+      (> next-population pre-population)
+      (update :unnecessary-death + (* 0.01 (- next-population pre-population)))
 
       (> next-population 2000) (update :level-2-counter inc)
 
@@ -244,14 +252,14 @@
 
 
 (def real-world "iAiAiAiAiAiAiAiAiAiAiAiAiAtAtAtAtAtAtAiAiAiAiAiAiAiAn0n0iAiAn0iAiAiAiAiAiAiAiAiA
-.0.0.0.0.0.0.0.0tAt0t0tAtAtAtAtAtAtA.0.0.0tAtA.0.0.0.0.0.0.0.0n0.0.0.0n0.0.0.0.0
+.0.0.0.0.0.0.0.0tAt0t0tAtAtAtAtAtAtAn0n0n0tAtA.0.0.0.0.0.0.0.0n0.0.0.0n0.0.0.0.0
 .0.0.0tAtAtAtAtAtAn0aAtA.0.0tAtAtAtA.0.0.0.0.0.0tAaAtAtAtA.0.0.0tAtAtA.0.0.0.0.0
 .0tAtAtAtAtAtAtAtAaAaAn0tA.0.0tAtA.0.0.0.0.0tAaAtApAaAtAtAaAaAcAtAaAaAcAtAcAcAtA
 tAtAtAtAtAtAtAtAtAaA.0.0cAtAtA.0.0aA.0.0tA.0tApA.0pAaAcAcAcAtAcAtAaAaAcAaAcAtAtA
-tAtAtAtAtAtAtAaAaAaApAcAcAcAcAtA.0.0.0.0cA.0aA.0cAcAcAtAtAtAaAtAaAaAaAcA.0tAtA.0
-.0.0.0cApAcAaAaAaAaApApAcAcAcA.0.0.0.0pAcA.0.0cAcAcAcAcAtAtAtAtAaAaAcApAaA.0.0.0
-.0.0.0cAaAcAaAaAaAaAaAcAcAcA.0.0.0.0.0.0.0cAcAcAcAcAaAaAaAtAaAaAaAaAcAaA.0.0.0.0
-.0.0.0.0pAtAcApAtApApAcAcA.0.0.0.0.0.0cAcAcAtAcAaAaApAtAtAaAaAaAaAaAaA.0aA.0.0.0
+tAtAtAtAtAtAtAaAaAaApAcApApApAtA.0.0.0.0cA.0aA.0cApApAtAtAtAaAtAaAaAaAcA.0tAtA.0
+.0.0.0cApAcAaAaAaAaApApApApAcA.0.0.0.0pAcA.0.0cApApApApAtAtAtAtAaAaAcApAaA.0.0.0
+.0.0.0cAaApAaAaAaAaAaAcAcAcA.0.0.0.0.0.0.0cAcAcAcAcAaAaAaAtAaAaAaAaAcAaA.0.0.0.0
+.0.0.0n0pAtApApAtApApAcAcA.0.0.0.0.0.0cAcAcAtAcAaAaApAtAtAaAaAaAaAaAaA.0aA.0.0.0
 .0.0.0.0pAaAcAtApAcApAcA.0.0.0.0.0.0cAcAaApAcAcAcAcAcAcAcAcAcAaAaAcA.0.0aA.0.0.0
 .0.0.0cAcAaAaAaAcAcAcA.0.0.0.0.0.0cAcAcAcAaAcAcAcApAaAaAtAtAtAaAaAcAcA.0cA.0.0.0
 .0.0.0.0cAcAcAcAaAcA.0.0.0cA.0.0.0.0cAcA.0.0.0cA.0pA.0aAtAtAn0aAcAcApA.0aA.0.0.0
