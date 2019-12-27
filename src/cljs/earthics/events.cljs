@@ -28,23 +28,25 @@
                       mode-group (keyword (namespace mode))
                       mode (keyword (name mode))
                       current-surface (get-in db [:world x y :surface])
+                      current-terrain (get-in db [:world x y :terrain])
                       q (get-in db [:world x y :surface-q])
                       ;tile (get-in db :world x y)
                       ]
-                  (cond (= mode-group :terrain)
-                        {:db (-> db
-                                 (assoc-in [:world x y :terrain] mode)
-                                 (assoc-in [:world x y :surface] :none)
-                                 (assoc-in [:world x y :surface-q] 0))}
+                  {:db (cond-> db
+                         (= mode-group :terrain)
+                         (-> (assoc-in [:world x y :terrain] mode)
+                             (assoc-in [:world x y :surface] :none)
+                             (assoc-in [:world x y :surface-q] 0))
 
-                        (= mode-group :surface)
-                        {:db (-> db
-                                 (assoc-in [:world x y :terrain] :land)
-                                 (assoc-in [:world x y :surface] mode)
-                                 (assoc-in [:world x y :surface-q] 0)
-                                 (update :unnecesary-death (fn [x] (if (= current-surface :civilisation)
-                                                                    (+ x q)
-                                                                    x))))}))))
+                         (and (= current-terrain :land)
+                              (= mode-group :surface))
+                         (-> (assoc-in [:world x y :surface] mode)
+                             (assoc-in [:world x y :surface-q] (if (= mode :volcano)
+                                                                 (inc (rand-int 10))
+                                                                 0))
+                             (update :unnecesary-death (fn [x] (if (= current-surface :civilisation)
+                                                                (+ x q)
+                                                                x)))))})))
 
 (reg-event-db :step
               (fn [db _]
@@ -55,3 +57,7 @@
                 (let [{:keys [mouse-down]} db]
                   (when mouse-down
                     {:dispatch [:tile-click x y]}))))
+
+(reg-event-db :load-default
+              (fn [db _]
+                (db/read-world db/default-db db/real-world)))

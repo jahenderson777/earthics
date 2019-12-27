@@ -50,7 +50,7 @@
        [:div "CO2: " (gstring/format "%.2f" (<- :get :co2))]
        [:div "methane: " (gstring/format "%.2f" (<- :get :methane))]
        [:div "rainfall: " (gstring/format "%.2f" (<- :get :rainfall))]
-       ;[:div "particulates: " (<- :get :particulates)]
+       [:div "particulates: " (gstring/format "%.2f" (<- :get :particulates))]
        ]
 
       [:div {:style {:display "inline-block" :margin-left 10}}
@@ -61,27 +61,35 @@
        ;[:div "fulfilment: " (<- :get :fulfilment)]
        ]
 
-      [:div {:style {:display "inline-block" :margin-left 10 :font-size 20 :vertical-align "top"}}
-       "date: " (gstring/format "%.2f" (<- :get :time))]
+
+      [:div {:style {:display "inline-block"}}
+       [:div {:on-click #(dispatch [:load-default])
+              :style {:padding 4
+                      :margin 4
+                      :display "inline-block"
+                      :background "#474"}}
+        "reset"]
+       [:div {:style {:display "inline-block" :margin-left 10 :font-size 20 :vertical-align "top"}}
+        "date: " (gstring/format "%.2f" (<- :get :time))]]
 
       [:div {:style {:display "inline-block" :text-align "center" :margin-left 10 :vertical-align "top"}}
        (doall (for [[mode-group {:keys [modes label]}] db/modes]
                 ^{:key mode-group}
                 [:div {:style {:display "block" :text-align "center"}}
                  [:div label]
-                 (for [[mode {:keys [label level]}] modes
-                       :let [mode (keyword mode-group mode)]
-                       :when (or (nil? level)
-                                 (and (= 2 level) (<- :get :level-2)))]
-                   ^{:key mode}
-                   [:div {:on-click #(dispatch [:assoc :mode mode])
-                          :style {:padding 4
-                                  :margin 3
-                                  :display "inline-block"
-                                  :background (if (= mode current-mode)
-                                                "#339"
-                                                "#555")}}
-                    label])]))]]]))
+                 (doall (for [[mode {:keys [label level]}] modes
+                              :let [mode (keyword mode-group mode)]
+                              :when (or (nil? level)
+                                        (and (= 2 level) (<- :get :level-2)))]
+                          ^{:key mode}
+                          [:div {:on-click #(dispatch [:assoc :mode mode])
+                                 :style {:padding 4
+                                         :margin 3
+                                         :display "inline-block"
+                                         :background (if (= mode current-mode)
+                                                       "#339"
+                                                       "#555")}}
+                           label]))]))]]]))
 
 (defn draw-canvas-contents [canvas props]
   (let [{:keys [data color scale]} props
@@ -138,4 +146,6 @@
    [html-canvas {:color (hsl 50 80 50)
                  :scale 0.1
                  :data (<- :get :history :unnecessary-death)}]])
+
+
 
